@@ -52,3 +52,8 @@ BlHandlerAnnouncementSubscription >> subscriber [
 BlHandlerAnnouncementSubscription >> subscriber: aTBlEventHandler [
 	subscriber := aTBlEventHandler
 ]
+
+{ #category : #accessing }
+BlHandlerAnnouncementSubscription >> unregister [
+	"Nothing, for compatibility with AnnouncementSubscription"
+]
