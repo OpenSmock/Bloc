@@ -133,7 +133,7 @@ BlTaskQueue >> requeue: aBlTask [
 	self enqueue: aBlTask
 ]
 
-{ #category : #'api - running' }
+{ #category : #actions }
 BlTaskQueue >> runOn: aSpace [
 
 	| theTasks |
@@ -147,7 +147,7 @@ BlTaskQueue >> runOn: aSpace [
 		tasks := nil.
 		"Mark all tasks as pending"
 		theTasks ifNotNil: [
-			theTasks do: [ :task | task setPendingExecution ] ] ].
+			theTasks do: [ :task | task setPendingExecution ] ] .
 
 	"Since we have an immutable reference to original array, there is
 	need to execute task within a lock."
@@ -158,7 +158,7 @@ BlTaskQueue >> runOn: aSpace [
 				run;
 				requeueTaskAfterExecution)
 					ifTrue: [ self requeue: aTask ]
-					ifFalse: [ aTask setComplete ] ] ]
+					ifFalse: [ aTask setComplete ] ] ] ]
 ]
 
 { #category : #accessing }

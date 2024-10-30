@@ -379,18 +379,18 @@ BlTextElement >> offsetFromSegmentStart [
 	^ self textFlow offsetFromSegmentStart
 ]
 
-{ #category : #'hooks - session' }
+{ #category : #'hooks - children' }
 BlTextElement >> onAddedToSceneGraph [
 	super onAddedToSceneGraph.
 	
 	paragraph
-		ifNil: [ ^ self ].
+		ifNil: [ ^ self textChanged ].
 		
 	paragraph session == Smalltalk session
 		ifFalse: [ self textChanged ]
 ]
 
-{ #category : #layout }
+{ #category : #'hooks - children' }
 BlTextElement >> onMeasure: anExtentMeasurementSpec [
 
 	"Do the measuring job"
@@ -400,7 +400,9 @@ BlTextElement >> onMeasure: anExtentMeasurementSpec [
 
 	fillSize := 0.
 
+	
 	self onParagraphMeasure: anExtentMeasurementSpec.
+	paragraph ifNil: [ ^ self textChanged ].
 	self onPostMeasure: anExtentMeasurementSpec.
 	self measureChildren: anExtentMeasurementSpec
 ]

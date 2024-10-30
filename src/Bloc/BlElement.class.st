@@ -544,11 +544,12 @@ BlElement >> attachSpace [
 	detached from the space. We have to requestFocus again, otherwise the focus
 	request will never reach the space.
 	(https://github.com/feenkcom/gtoolkit/issues/1457)"
-	self isFocused
+	self isFocusable ifTrue: [
+		self isFocused
 		ifTrue: [ self requestFocus: self ]
 		ifFalse: [
 			self space focusOwner == self
-				ifTrue: [ self loseFocus: self ] ].
+				ifTrue: [ self loseFocus: self ] ] ].
 
 	self taskQueue isEmpty
 		ifFalse: [ self space enqueueTasksFrom: self taskQueue ].
@@ -1947,22 +1948,22 @@ BlElement >> inSpace [
 
 ]
 
-{ #category : #processing }
+{ #category : #'api - space' }
 BlElement >> inUIProcessDo: aBlock [
 	"Run the supplied block in the UI process.
 	If the active process is already the UI process, evaluate immediately. 
 	Otherwise, queue up for the next frame."
 
-	| uiProcess |
+"	| uiProcess |
 	self isAttachedToSceneGraph ifTrue: [ 
 		self space host uiProcessDo: [ :uiProc | uiProcess := uiProc ] ].
 
 	uiProcess = Processor activeProcess
 		ifTrue: [ aBlock value ]
-		ifFalse: [ 
+		ifFalse: [ "
 			self enqueueTask: (BlTaskAction new
 					 action: aBlock;
-					 yourself) ]
+					 yourself) "]"
 ]
 
 { #category : #initialization }
