@@ -46,3 +46,8 @@ ReBlocDoNotSendForceLayoutRule >> basicCheck: aMethod [
 
 	^ (aMethod sendsSelector: #forceLayout)
 ]
+
+{ #category : #accessing }
+ReBlocDoNotSendForceLayoutRule >> name [
+	^'Send Force Layout Rule'
+]

@@ -38,3 +38,9 @@ ReBlocWidthShouldNotBeOverriddenRule >> basicCheck: aMethod [
 	^ (aMethod methodClass inheritsFrom: BlElement) and: [
 		  aMethod methodClass includesSelector: #width ]
 ]
+
+{ #category : #accessing }
+ReBlocWidthShouldNotBeOverriddenRule >> name [
+
+	^ 'Width Should not be override'
+]
