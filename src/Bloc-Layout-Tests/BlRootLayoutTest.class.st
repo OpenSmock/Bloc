@@ -48,13 +48,13 @@ BlRootLayoutTest >> childExactWidth: aNumber [
 ]
 
 { #category : #tests }
-BlRootLayoutTest >> parentWithFixedSize [
+BlRootLayoutTest >> parentWithFixedExtent [
 	<sampleInstance>
 	
 	| element |
 	element :=  BlElement new
 		border: (BlBorder builder dashed; paint: Color red; width: 3; build);
-		size: 400@300;
+		extent: 400@300;
 		yourself.
 		
 	self assert: element position equals: 0@0.
@@ -107,7 +107,7 @@ BlRootLayoutTest >> testParentWithFixedSize [
 	| element |
 	element :=  BlElement new
 		border: (BlBorder builder dashed; paint: Color red; width: 3; build);
-		size: 400@300;
+		extent: 400@300;
 		yourself.
 		
 	self assert: element position equals: 0@0.

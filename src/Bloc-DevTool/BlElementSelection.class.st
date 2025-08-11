@@ -73,7 +73,7 @@ BlElementSelection >> hideInfo [
 
 	self padding: BlInsets empty.
 	self position: self selectionPosition.
-	self size: self selectionExtent.
+	self extent: self selectionExtent.
 	
 	self effect: BlNullEffect new.
 	self background: self defaultBackground.
@@ -98,40 +98,55 @@ BlElementSelection >> initialize [
 
 { #category : #initialization }
 BlElementSelection >> initializeActions [
-	| initialPosition initialSize |
 
-	removeButton := BlElementSelectionButton icon: BlEllipseGeometry new extent: 12@12.
+	| initialPosition initialExtent |
+	removeButton := BlElementSelectionButton
+		                icon: BlEllipseGeometry new extent: 12 @ 12.
 	removeButton opacity: 0.75.
 	removeButton background: Color red.
-	removeButton border: (BlBorder builder width: 1; paint: Color black; build).
-	
-	inspectButton := BlElementSelectionButton icon: BlEllipseGeometry new  extent: 12@12.
+	removeButton border: (BlBorder paint: Color black width: 1).
+
+	inspectButton := BlElementSelectionButton
+		                 icon: BlEllipseGeometry new
+		                 extent: 12 @ 12.
 	inspectButton opacity: 0.75.
 	inspectButton background: Color blue.
-	inspectButton border: (BlBorder builder width: 1; paint: Color black; build).
-	
-	resizeButton := BlElementSelectionButton icon: BlEllipseGeometry new extent: 12@12.
+	inspectButton border: (BlBorder paint: Color black width: 1).
+
+	resizeButton := BlElementSelectionButton
+		                icon: BlEllipseGeometry new
+		                extent: 12 @ 12.
 	resizeButton opacity: 0.75.
 	resizeButton background: Color yellow.
-	resizeButton border: (BlBorder builder width: 1; paint: Color black; build).
+	resizeButton border: (BlBorder paint: Color black width: 1).
 
-	removeButton addEventHandler: (BlEventHandler on: BlClickEvent do: [ :evt |
-		"we will close automatically"
-		self client removeFromParent ]).
+	removeButton
+		addEventHandlerOn: BlClickEvent
+		do: [ :evt |
+			"we will close automatically"
+			self client removeFromParent ].
 
-	resizeButton addEventHandler: (BlEventHandler on: BlDragStartEvent do: [ :evt |
-		initialPosition := evt position.
-		initialSize := self client extent.
-		evt consume ]).
-	resizeButton addEventHandler: (BlEventHandler on: BlDragEndEvent do: [ :evt |  evt consume.]).
-	resizeButton addEventHandler: (BlEventHandler on: BlDragEvent do: [ :evt |
-		evt consume.
-		self client size: (initialSize + evt position - initialPosition) ]).
+	resizeButton
+		addEventHandlerOn: BlDragStartEvent
+		do: [ :evt |
+			initialPosition := evt position.
+			initialExtent := self client extent.
+			evt consume ].
+	resizeButton
+		addEventHandlerOn: BlDragEndEvent
+		do: [ :evt | evt consume ].
+	resizeButton
+		addEventHandlerOn: BlDragEvent
+		do: [ :evt |
+			evt consume.
+			self client extent: initialExtent + evt position - initialPosition ].
 
-	inspectButton addEventHandler: (BlEventHandler on: BlClickEvent do: [ :evt | 
-		evt consume.
-		self client inspect]).
-	
+	inspectButton
+		addEventHandlerOn: BlClickEvent
+		do: [ :evt |
+			evt consume.
+			self client inspect ].
+
 	self addChild: removeButton.
 	self addChild: inspectButton.
 	self addChild: resizeButton
@@ -236,5 +251,5 @@ BlElementSelection >> showOn: anElement [
 	client space root addChild: self.
 
 	self position: self selectionPosition.
-	self size: self selectionExtent
+	self extent: self selectionExtent
 ]

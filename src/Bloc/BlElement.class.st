@@ -79,6 +79,13 @@ BlElement class >> id: aStringOrSymbol [
 	^ self new id: aStringOrSymbol
 ]
 
+{ #category : #'layout anchors' }
+BlElement >> actionAnchor: aBlock [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) 
+		  actionAnchor: aBlock
+]
+
 { #category : #'api - animations' }
 BlElement >> addAnimation: aBlBaseAnimation [
  
@@ -296,8 +303,23 @@ BlElement >> allChildrenBreadthFirstDetect: aBlock ifFound: ifFoundBlock ifNone:
 
 { #category : #'api - children enumeration' }
 BlElement >> allChildrenBreadthFirstDo: aBlock [ 
+	" run the block for all children breadth first "
+
 	self childrenDo: aBlock.
 	self childrenDo: [ :each | each allChildrenBreadthFirstDo: aBlock ]
+]
+
+{ #category : #'api - children enumeration' }
+BlElement >> allChildrenBreadthFirstDo: aBlock while: aConditionBlock [
+	" run the block for all children breadth first while aConditionBlock value is true.
+	If aConditionBlock value is false, then the enumeration stops (the children are not enumerated) "
+
+	| allowedChildren |
+	allowedChildren := self children select: [ :each |
+		                   aConditionBlock value: each ].
+	allowedChildren do: [ :each | aBlock value: each ].
+	allowedChildren do: [ :each |
+		each allChildrenBreadthFirstDo: aBlock while: aConditionBlock ]
 ]
 
 { #category : #'api - children enumeration' }
@@ -339,8 +361,23 @@ BlElement >> allChildrenCount [
 
 { #category : #'api - children enumeration' }
 BlElement >> allChildrenDepthFirstDo: aBlock [
+	" run the block for all children depth first  "
+
 	self childrenDo: [ :each | each allChildrenDepthFirstDo: aBlock ].
 	self childrenDo: aBlock
+]
+
+{ #category : #'api - children enumeration' }
+BlElement >> allChildrenDepthFirstDo: aBlock while: aConditionBlock [
+	" run the block for all children depth first while aConditionBlock value is true.
+	If aConditionBlock value is false, then the enumeration stops (the children are not enumerated) "
+
+	| allowedChildren |
+	allowedChildren := self children select: [ :each |
+		                   aConditionBlock value: each ].
+	allowedChildren do: [ :each |
+		each allChildrenDepthFirstDo: aBlock while: aConditionBlock ].
+	allowedChildren do: aBlock
 ]
 
 { #category : #'children accessing' }
@@ -691,6 +728,24 @@ BlElement >> border: aBlBorder [
 	self invalidate
 ]
 
+{ #category : #'layout anchors' }
+BlElement >> bottomAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) bottomAnchor
+]
+
+{ #category : #'layout anchors' }
+BlElement >> bottomLeftAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) bottomLeftAnchor
+]
+
+{ #category : #'layout anchors' }
+BlElement >> bottomRightAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) bottomRightAnchor
+]
+
 { #category : #'geometry bounds' }
 BlElement >> bounds [
 	<return: #BlElementBounds>
@@ -702,7 +757,7 @@ BlElement >> bounds [
 BlElement >> bounds: aBounds [
 
 	self position: aBounds position.
-	self size: aBounds extent
+	self extent: aBounds extent
 ]
 
 { #category : #'private - accessing' }
@@ -738,6 +793,12 @@ BlElement >> boundsInWindow [
 	^ self isAttachedToSceneGraph
 		ifTrue: [ boundsCache boundsInSpace scaleBy: self space windowScale ]
 		ifFalse: [ boundsCache boundsInSpace ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> centerAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) centerAnchor
 ]
 
 { #category : #updating }
@@ -1490,20 +1551,29 @@ BlElement >> extent [
 	Extent is a point with `x` component representing my width
 	and y component representing my height accordingly"
 
-	<return: #Point>
-	self
-		flag:
-			'TODO as extent: is deprecated, should this be as well in favor of size?'.
 	^ self bounds extent
 ]
 
 { #category : #'geometry extent' }
 BlElement >> extent: aPoint [ 
-	self 
-		deprecated: 'Use size: instead'
-		on: 	'1 October 2017' 
-		in: 'Pharo-7.0-alpha.build.132.sha.4ea2f39a9f43185d31b844be5ad33b677f43bf17'.
-	^ self size: aPoint 
+
+	| aLayoutConstraints |
+	aLayoutConstraints := self constraints.
+	(aLayoutConstraints horizontal resizer isExact and: [ 
+		aLayoutConstraints horizontal resizer size = aPoint x 
+			and: [ aLayoutConstraints vertical resizer isExact
+				and: [ aLayoutConstraints vertical resizer size = aPoint y ] ] ])
+		ifTrue: [ ^ self ].
+
+	self constraintsDo: [ :c |
+		c horizontal exact: aPoint x.
+		c vertical exact: aPoint y ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> extentAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) extentAnchor
 ]
 
 { #category : #'event handling' }
@@ -1916,16 +1986,26 @@ BlElement >> height [
 
 { #category : #'api - bounds' }
 BlElement >> height: aNumber [
-	<event: #BlElementExtentChangedEvent>
-	| aLayoutConstraints |
 
+	| aLayoutConstraints |
 	aLayoutConstraints := self constraints.
-	(aLayoutConstraints vertical resizer isExact and: [ 
+	(aLayoutConstraints vertical resizer isExact and: [
 		aLayoutConstraints vertical resizer size = aNumber ])
 		ifTrue: [ ^ self ].
 
-	self constraintsDo: [ :c |
-		c vertical exact: aNumber ]
+	self constraintsDo: [ :c | c vertical exact: aNumber ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> heightAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) heightAnchor
+]
+
+{ #category : #'layout anchors' }
+BlElement >> horizontalCenterAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) horizontalCenterAnchor
 ]
 
 { #category : #accessing }
@@ -2181,10 +2261,11 @@ BlElement >> isLayoutBoundary [
 	"Return true if I am a layout boundary, e.g. the layout recomputation requests should not be propagated up in the hierarchy.
 	Imagine an element matches parent in both directions or has a fixed size, in this case even if my children request layout update
 	I do not have to propagate it further because it will not have any influence on the parent"
-	<return: #Boolean>
-	
-	^ (self constraints horizontal resizer isExact or: [ self constraints horizontal resizer isMatchParent ])
-		and: [ self constraints vertical resizer isExact or: [ self constraints vertical resizer isMatchParent ] ]
+
+	^ (self constraints horizontal resizer isExact or: [
+		   self constraints horizontal resizer isMatchParent ]) and: [
+			  self constraints vertical resizer isExact or: [
+				  self constraints vertical resizer isMatchParent ] ]
 ]
 
 { #category : #layout }
@@ -2306,6 +2387,12 @@ BlElement >> layoutDo: aBlock [
 
 	aBlock value: self layout.
 	self requestLayout
+]
+
+{ #category : #'layout anchors' }
+BlElement >> leftAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) leftAnchor
 ]
 
 { #category : #'geometry bounds convertion' }
@@ -2522,6 +2609,20 @@ BlElement >> markNeedsPaintFrom: anElement [
 ]
 
 { #category : #'view - configuration' }
+BlElement >> maxExtent [
+
+	^ self maxWidth @ self maxHeight
+]
+
+{ #category : #'view - configuration' }
+BlElement >> maxExtent: aPoint [
+
+	self constraintsDo: [ :c |
+		c maxWidth: aPoint x.
+		c maxHeight: aPoint y ]
+]
+
+{ #category : #'view - configuration' }
 BlElement >> maxHeight [
 
 	"get maxHeight in constraints"
@@ -2538,16 +2639,25 @@ BlElement >> maxHeight: aNumber [
 { #category : #'view - configuration' }
 BlElement >> maxSize [
 
-	"get maxSize in constraints"
-	^ self maxWidth @ self maxHeight
+	self
+		deprecated: 'Use #maxExtent instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver maxSize' ->
+			'`@receiver maxExtent'.
+
+	^ self maxExtent
 ]
 
 { #category : #'view - configuration' }
 BlElement >> maxSize: aPoint [
 
-	self constraintsDo: [ :c |
-		c maxWidth: aPoint x.
-		c maxHeight: aPoint y ]
+	self
+		deprecated: 'Use #maxExtent: instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver maxSize: `@arg' ->
+			'`@receiver maxExtent: `@arg'.
+
+	self maxExtent: aPoint
 ]
 
 { #category : #'view - configuration' }
@@ -2664,6 +2774,20 @@ BlElement >> measuredWidth [
 ]
 
 { #category : #'view - configuration' }
+BlElement >> minExtent [
+
+	^ self minWidth @ self minHeight
+]
+
+{ #category : #'view - configuration' }
+BlElement >> minExtent: aPoint [
+
+	self constraintsDo: [ :c |
+		c minWidth: aPoint x.
+		c minHeight: aPoint y ]
+]
+
+{ #category : #'view - configuration' }
 BlElement >> minHeight [
 
 	"get minHeight in constraints"
@@ -2679,16 +2803,25 @@ BlElement >> minHeight: aNumber [
 { #category : #'view - configuration' }
 BlElement >> minSize [
 
-	"get maxSize in constraints"
-	^ self minWidth @ self minHeight
+	self
+		deprecated: 'Use #minExtent instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver minSize' ->
+			'`@receiver minExtent'.
+
+	^ self minExtent
 ]
 
 { #category : #'view - configuration' }
 BlElement >> minSize: aPoint [
 
-	self constraintsDo: [ :c |
-		c minWidth: aPoint x.
-		c minHeight: aPoint y ]
+	self
+		deprecated: 'Use #minExtent: instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver minSize: `@arg' ->
+			'`@receiver minExtent: `@arg'.
+
+	self minExtent: aPoint
 ]
 
 { #category : #'view - configuration' }
@@ -2720,6 +2853,12 @@ BlElement >> needsPaint [
 	"Return true if I am marked as dirty and am waiting to be re-painted"
 
 	^ flags hasNeedsPaint
+]
+
+{ #category : #'layout anchors' }
+BlElement >> neutralAnchor: aNeutralValue [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) neutralAnchor: aNeutralValue
 ]
 
 { #category : #initialization }
@@ -2763,6 +2902,12 @@ BlElement >> nextSiblingSuchThat: aSelectionBlock do: aBlock [
 		aSiblingChild := self parent childAt: eachIndex.
 		(aSelectionBlock value: aSiblingChild)
 			ifTrue: [ ^ aBlock value: aSiblingChild ] ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> nilAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) nilAnchor
 ]
 
 { #category : #'geometry hooks' }
@@ -3119,6 +3264,18 @@ BlElement >> parentPointToLocal: aPoint [
 	aLocalPoint := aLocalPoint translateBy: self position negated.
 	aLocalPoint := self transformation inverseTransformPoint: aLocalPoint.
 	^ aLocalPoint
+]
+
+{ #category : #'layout anchors' }
+BlElement >> perimeterAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) perimeterAnchor
+]
+
+{ #category : #'layout anchors' }
+BlElement >> pointAnchor [ 
+
+	^ (self constraints anchors newExplicitReceiverWith: self) pointAnchor
 ]
 
 { #category : #'geometry position' }
@@ -3573,9 +3730,21 @@ BlElement >> requestParentLayout [
 ]
 
 { #category : #'geometry bounds' }
+BlElement >> requestedExtent [
+	"Normally, one should wait for the layouting to measure myself exactly.
+	But, in case my extent (or my height or my width) is set with an #exact: send, it is possible
+	to get the exact extent|height|width. 
+	So requestExtent|height|width will works correctly only in this particular case.
+	The behavior in others cases may be impredictable or may raise an error.
+	"
+
+	^ self constraints requestedExtentIn: self
+]
+
+{ #category : #'geometry bounds' }
 BlElement >> requestedHeight [
 	" return the exact height. Use it only if you know what your are doing. 
-	see BlElement>>requestedSize comment"
+	see BlElement>>requestedExtent comment"
 
 	^ self constraints requestedHeightIn: self
 ]
@@ -3583,20 +3752,19 @@ BlElement >> requestedHeight [
 { #category : #'geometry bounds' }
 BlElement >> requestedSize [ 
 
-	"Normally, one shoud wait for the layouting to measure myself exactly.
-	But, in case my size (or my height or my width) is set with an #exact: send, it is possible
-	to get the exact size|height|width. 
-	So requestSize|height|width will works correctly only in this particular case.
-	The behavior in others cases may be impredictable or may raise an error.
-	"
+	self
+		deprecated: 'Use #requestedExtent instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver requestedSize' ->
+			'`@receiver requestedExtent'.
 
-	^ self constraints requestedSizeIn: self
+	^ self requestedExtent
 ]
 
 { #category : #'geometry bounds' }
 BlElement >> requestedWidth [ 
 	" return the exact width. Use it only if you know what your are doing. 
-	see BlElement>>requestedSize comment"
+	see BlElement>>requestedExtent comment"
 
 	^ self constraints requestedWidthIn: self
 ]
@@ -3604,6 +3772,12 @@ BlElement >> requestedWidth [
 { #category : #initialization }
 BlElement >> resetChildrenArray [
 	children := Bloc preferableChildrenDataStructure new
+]
+
+{ #category : #'layout anchors' }
+BlElement >> rightAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) rightAnchor
 ]
 
 { #category : #'api - children enumeration' }
@@ -3659,24 +3833,26 @@ BlElement >> siblingsDo: aBlock [
 
 { #category : #'api - bounds' }
 BlElement >> size [
+
+	self
+		deprecated: 'Use #extent instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver size' ->
+			'`@receiver extent'.
+
 	^ self extent
 ]
 
 { #category : #'api - bounds' }
 BlElement >> size: aPoint [
-	<event: #BlElementExtentChangedEvent>
-	| aLayoutConstraints |
 
-	aLayoutConstraints := self constraints.
-	(aLayoutConstraints horizontal resizer isExact and: [ 
-		aLayoutConstraints horizontal resizer size = aPoint x 
-			and: [ aLayoutConstraints vertical resizer isExact
-				and: [ aLayoutConstraints vertical resizer size = aPoint y ] ] ])
-		ifTrue: [ ^ self ].
+	self
+		deprecated: 'Use #extent: instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver size: `@arg' ->
+			'`@receiver extent: `@arg'.
 
-	self constraintsDo: [ :c |
-		c horizontal exact: aPoint x.
-		c vertical exact: aPoint y ]
+	self extent: aPoint
 ]
 
 { #category : #accessing }
@@ -3755,6 +3931,18 @@ BlElement >> taskQueue [
 	^ taskQueue
 ]
 
+{ #category : #'layout anchors' }
+BlElement >> topAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) topAnchor
+]
+
+{ #category : #'layout anchors' }
+BlElement >> topLeftAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) topLeftAnchor
+]
+
 { #category : #'children accessing' }
 BlElement >> topMostParent [
 	"Return a topmost parent in a scene graph.
@@ -3780,6 +3968,12 @@ BlElement >> topMostParentSuchThat: aConditionBlock ifFound: ifFoundBlock ifNone
 	^ aTargetParent
 		ifNil: ifNoneBlock
 		ifNotNil: ifFoundBlock
+]
+
+{ #category : #'layout anchors' }
+BlElement >> topRightAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) topRightAnchor
 ]
 
 { #category : #transformations }
@@ -3848,6 +4042,12 @@ BlElement >> userData [
 	Be careful to limit the use of such facility and prefer clean instance variables when it is possible to define them."
 
 	^ userData ifNil: [ userData := IdentityDictionary new ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> verticalCenterAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) verticalCenterAnchor
 ]
 
 { #category : #accessing }
@@ -3930,9 +4130,9 @@ BlElement >> whenLayoutedDo: aBlock [
 BlElement >> whenLayoutedDoOnce: aBlock [
 	"Evaluate block passed as argument after the layout applied.
 
-	As an example of use, imagine you need to get the actual size of an element.
-	The size is computed by the layout.
-	Thus, if one need to get the size of an element one have to be sure that its layout applied."
+	As an example of use, imagine you need to get the actual extent of an element.
+	The extent is computed by the layout.
+	Thus, if one need to get the extent of an element one have to be sure that its layout applied."
 
 	^ self
 		addEventHandlerOn: BlElementLayoutComputedEvent
@@ -3946,16 +4146,20 @@ BlElement >> width [
 
 { #category : #'api - bounds' }
 BlElement >> width: aNumber [
-	<event: #BlElementExtentChangedEvent>
-	| aLayoutConstraints |
 
+	| aLayoutConstraints |
 	aLayoutConstraints := self constraints.
 	(aLayoutConstraints horizontal resizer isExact and: [ 
 		aLayoutConstraints horizontal resizer size = aNumber ])
 		ifTrue: [ ^ self ].
 
-	self constraintsDo: [ :c |
-		c horizontal exact: aNumber ]
+	self constraintsDo: [ :c | c horizontal exact: aNumber ]
+]
+
+{ #category : #'layout anchors' }
+BlElement >> widthAnchor [
+
+	^ (self constraints anchors newExplicitReceiverWith: self) widthAnchor
 ]
 
 { #category : #'api - children enumeration' }
@@ -4016,14 +4220,37 @@ BlElement >> withAllChildrenBreadthFirst [
 
 { #category : #'api - children enumeration' }
 BlElement >> withAllChildrenBreadthFirstDo: aBlock [ 
+	" run the block for the receiver then for all children breadth first "
+
 	aBlock value: self.
 	self allChildrenBreadthFirstDo: aBlock
 ]
 
 { #category : #'api - children enumeration' }
+BlElement >> withAllChildrenBreadthFirstDo: aBlock while: aConditionBlock [
+	" run the block for the receiver then for all children breadth first while aConditionBlock value is true.
+	If aConditionBlock value is false, then the enumeration stops (the children are not enumerated) "
+
+	(aConditionBlock value: self) ifFalse: [ ^ self ].
+	aBlock value: self.
+	self allChildrenBreadthFirstDo: aBlock while: aConditionBlock
+]
+
+{ #category : #'api - children enumeration' }
 BlElement >> withAllChildrenDepthFirstDo: aBlock [
-	self childrenDo: [ :each | each allChildrenDepthFirstDo: aBlock ].
-	self childrenDo: aBlock.
+	" run the block for the receiver then for all children depth first  "
+
+	self allChildrenDepthFirstDo: aBlock.
+	aBlock value: self
+]
+
+{ #category : #'api - children enumeration' }
+BlElement >> withAllChildrenDepthFirstDo: aBlock while: aConditionBlock [
+	" run the block for the receiver then for all children depth first while aConditionBlock value is true.
+	If aConditionBlock value is false, then the enumeration stops (the children are not enumerated) "
+
+	self allChildrenDepthFirstDo: aBlock while: aConditionBlock.
+	(aConditionBlock value: self) ifFalse: [ ^ self ].
 	aBlock value: self
 ]
 

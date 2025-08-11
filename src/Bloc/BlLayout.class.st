@@ -188,29 +188,33 @@ BlLayout >> layout: anElement in: aRectangle context: aBlElementBoundsUpdateCont
 BlLayout >> layoutIgnored: anElement context: aBlElementBoundsUpdateContext [
 	"Layout children ignored by layout so that their measured bounds
 	become actual bounds in parent"
-	| parentBounds |
 
+	| parentBounds |
 	"when layering ignored childed we don't take parent padding into account"
-	parentBounds := (0@0 extent: anElement extent).
+	parentBounds := 0 @ 0 extent: anElement extent.
 	"reuse the same instance for children bounds"
-	
+
 	anElement children
 		select: [ :aChild | aChild constraints ignoredByLayout ]
 		thenDo: [ :aChild |
-			| childBounds allowedBounds |
-			"ask child for its measured bounds"
-			childBounds := aChild measuredBounds bounds copy.
-			allowedBounds := aChild margin inset: parentBounds copy.
-
-			"frame layout supports alignment, so we need to translate child's bounds accordingly to alignment"
-			childBounds := self
-				align: childBounds
-				in: allowedBounds
-				with: aChild constraints ignored alignment.
+				| childBounds allowedBounds |
+				"ask child for its measured bounds"
+				"childBounds := aChild measuredBounds bounds copy."
 				
-			aChild measuredBounds position: childBounds origin.
-			"and finally set new bounds"
-			aChild applyLayoutIn: childBounds context: aBlElementBoundsUpdateContext ]
+				allowedBounds := aChild margin inset: parentBounds copy.
+				childBounds := aChild constraints anchors
+					               positionInParent: anElement
+					               forChild: aChild.
+				"frame layout supports alignment, so we need to translate child's bounds accordingly to alignment"
+				childBounds := self
+					               align: childBounds
+					               in: allowedBounds
+					               with: aChild constraints ignored alignment.
+
+				"and finally set new bounds"
+				aChild
+					applyLayoutIn: childBounds
+					context: aBlElementBoundsUpdateContext ]
 ]
 
 { #category : #protected }
@@ -225,7 +229,7 @@ BlLayout >> measure: anElement with: anExtentSpec [
 	"Default simple and naive implementation that does not support #fitContent resizing
 	strategy of the anElement that uses a layout with this version of measurement"
 
-	anElement measuredExtent: (anExtentSpec sizeForWidth: 0.0 height: 0.0).
+	anElement measuredExtent: (anExtentSpec extentForWidth: 0.0 height: 0.0).
 	self measuredChildren: anElement do: [ :aChild |
 		self
 			measureChild: aChild
@@ -301,20 +305,40 @@ BlLayout >> measureIgnored: anElement with: anExtentSpec [
 	anElement children
 		select: [ :aChild | aChild constraints ignoredByLayout ]
 		thenDo: [ :aChild |
-			| aWidthSpec aHeightSpec |
-			
-			aWidthSpec := anExtentSpec widthSpec.
-			aHeightSpec := anExtentSpec heightSpec.
+				| aWidthSpec aHeightSpec boundsWithAnchors boundsWithoutAnchors |
+				aWidthSpec := anExtentSpec widthSpec.
+				aHeightSpec := anExtentSpec heightSpec.
+				boundsWithoutAnchors := aChild measuredBounds asRectangle.
 
-			aChild constraints horizontal resizer isMatchParent
-				ifTrue: [ aWidthSpec := BlMeasurementSpec exact: (anElement measuredBounds width * aChild constraints ignored horizontal weight) ].
-			
-			aChild constraints vertical resizer isMatchParent
-				ifTrue: [ aHeightSpec := BlMeasurementSpec exact: (anElement measuredBounds height * aChild constraints ignored vertical weight) ].
-			
-			self
-				measureChild: aChild
-				parentSpec: aWidthSpec @ aHeightSpec ]
+				" If some anchors are declared, apply them else just return measuredBounds asRectangle "
+				boundsWithAnchors := aChild constraints anchors
+					                     measureInParent: anElement
+					                     forChild: aChild.
+				
+				aChild constraints horizontal resizer isMatchParent
+					ifTrue: [
+							aWidthSpec := BlMeasurementSpec exact:
+								              anElement measuredBounds width
+								              * aChild constraints ignored horizontal weight ]
+					ifFalse: [ " adapt the width spec if needed "
+							boundsWithAnchors width ~= boundsWithoutAnchors width ifTrue: [
+									aWidthSpec := BlMeasurementSpec exact:
+										              boundsWithAnchors width.
+									aChild constraints horizontal exact: boundsWithAnchors width ] ].
+
+				aChild constraints vertical resizer isMatchParent
+					ifTrue: [
+							aHeightSpec := BlMeasurementSpec exact:
+								               anElement measuredBounds height
+								               * aChild constraints ignored vertical weight ]
+					ifFalse: [ " adapt the height spec if needed "
+							boundsWithAnchors height ~= boundsWithoutAnchors height
+								ifTrue: [
+										aHeightSpec := BlMeasurementSpec exact:
+											               boundsWithAnchors height.
+										aChild constraints vertical exact: boundsWithAnchors height ] ].
+
+				self measureChild: aChild parentSpec: aWidthSpec @ aHeightSpec ]
 ]
 
 { #category : #enumeration }
